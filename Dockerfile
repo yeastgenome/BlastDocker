@@ -1,38 +1,49 @@
-FROM ubuntu:20.04
+FROM ubuntu:20.04 as builder
 
-ENV DEBIAN_FRONTEND noninteractive
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && apt-get install -y git wget \
+    && apt-get autoremove
 
-RUN apt-get update && apt-get install -y \
-    apache2 \
-    libapache2-mod-wsgi-py3 \
-    net-tools \
-    python3-pip \
-    wget
- 
-RUN mkdir /tools && cd /tools && \
-    wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.11.0+-x64-linux.tar.gz && \
-    tar -zxvf ncbi-blast-2.11.0+-x64-linux.tar.gz && \
-    ln -s ncbi-blast-2.11.0+ blast && \
-    rm ncbi-blast-2.11.0+-x64-linux.tar.gz
+WORKDIR /tools
 
-RUN cd /var/www && mkdir conf logs FlaskApp && cd FlaskApp && \
-    mkdir FlaskApp && cd FlaskApp && mkdir venv static templates
+RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.12.0+-x64-linux.tar.gz \
+    && tar zxvf ncbi-blast-2.12.0+-x64-linux.tar.gz \
+    && rm ncbi-blast-2.12.0+-x64-linux.tar.gz \
+    && git clone https://github.com/yeastgenome/BlastDocker.git
 
-RUN pip3 install Flask && pip3 install -U flask-cors 
+#####
 
-COPY www /var/www/
-COPY FlaskApp.conf /etc/apache2/sites-available/
+FROM ubuntu:20.04 
 
-RUN mkdir -p /data/blast/fungi
+WORKDIR /tools/ncbi-blast-2.12.0+
+COPY --from=builder /tools/ncbi-blast-2.12.0+ .
 
-#RUN a2ensite FlaskApp
+WORKDIR /tools
+RUN ln -s ncbi-blast-2.12.0+ blast \
+    && DEBIAN_FRONTEND=noninteractive apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        apache2 \
+        libapache2-mod-wsgi-py3 \
+        net-tools \
+        python3-pip \
+    && pip3 install Flask \
+    && pip3 install -U flask-cors \
+    && pip3 install virtualenv 
 
-RUN a2enmod wsgi && a2ensite FlaskApp && a2dissite 000-default
+WORKDIR /var/www
+COPY --from=builder /tools/BlastDocker/www .
 
-RUN pip3 install virtualenv 
+WORKDIR /etc/apache2/sites-available
+COPY FlaskApp.conf .
 
-RUN cd /var/www/FlaskApp/FlaskApp && virtualenv venv
+WORKDIR /var/www/FlaskApp/FlaskApp
+RUN a2enmod wsgi \
+    && a2ensite FlaskApp \
+    && a2dissite 000-default \
+    && virtualenv venv \
+    && . venv/bin/activate
 
-RUN #!/bin/bash . venv/bin/activate
+WORKDIR /
 
 CMD ["apachectl", "-D", "FOREGROUND"]
