@@ -46,7 +46,46 @@ def record_line(line):
     ncbiID = pieces[1]
     url = NCBI_URL + ncbiID
     return "<a href='" + url + "' target='_new'>" + pieces[0] + "|" + pieces[1] + "</a>|" + "|".join(pieces[2:]) 
+
+def link_out_for_feature(line):
+
+    piece = line.split(', Chr ')
+    name = piece[0].split(' ')[0].replace('>', '')
+    chrCoors = piece[1].split(' from ')
+    chr = chrCoors[0]
+    coords = chrCoors[1].split(' ')[0]
+    coord_list = coords.split(',')
+    beg = 0
+    end = 0
     
+    for coord_pair in coord_list:
+        if '-' not in coord_pair:
+            continue
+        [tmpBeg, tmpEnd] = coord_pair.split('-')
+        if int(tmpBeg) > int(tmpEnd):
+            (tmpBeg, tmpEnd) = (tmpEnd, tmpBeg)
+        if beg == 0:
+            beg = int(tmpBeg)
+        elif beg > int(tmpBeg):
+            beg = int(tmpBeg)
+        if end == 0:
+            end = int(tmpEnd)
+        elif end < int(tmpEnd):
+            end = int(tmpEnd)
+
+    GSR_link = "<a href='" + SEQAN + name + "' target='_new'>Retrieve Sequence</a>"
+    
+    start = beg - 5000
+    if start < 1:
+        start = 1
+    stop = end + 5000
+
+    JBROWSE_link = "<a href='" + GBROWSE + "chr" + chr + "%3A" + str(start) + ".." + str(stop) + "&tracks=DNA%2CAll%20Annotated%20Sequence%20Features&highlight=chr" + chr + "%3A" + str(beg) + ".."+ str(end) + "'  target='_new'>Genome Browser</a>"
+
+    LSP_link = "<a href='" + LOCUS + name + "' target='_blastout'>SGD Locus page</a> ]</b>"
+
+    return "  <b>[ " + GSR_link + " / " + JBROWSE_link + " / " + LSP_link + " ]</b>"
+
 def link_out(chr, chrnum, beg, end):
 
     GSR_link = "<a href='" + SEQ + chrnum + "&start=" + beg + "&end=" + end + "&submit2=Submit+Form" + "' target='_new'>Retrieve Sequence</a>"
@@ -80,7 +119,7 @@ def markupChromosomalCoord(blastOutput):
     chrnum = ''
     beg = ''
     end = ''
-
+    subHit = 0
     for line in lines:        
         if line.startswith('>'):
             startRecord = 1
@@ -99,6 +138,7 @@ def markupChromosomalCoord(blastOutput):
                 chrnum = ''
                 beg = ''
                 end = ''
+                subHit = 0
                 newline = record_line(line)
                 recordBeforeScore = newline + "\n"
                 recordAfterScore = ''
@@ -113,6 +153,10 @@ def markupChromosomalCoord(blastOutput):
                 recordBeforeScore = recordBeforeScore + line + "\n"
             else:
                 recordAfterScore = recordAfterScore + line + "\n"
+                if beg != '' and end != '' and 'Identities =' in line:
+                    subHit = 1
+                if subHit == 1:
+                    continue
                 if line.startswith('Sbjct '):
                     pieces = line.split(' ')
                     tmp_beg = ''
@@ -143,6 +187,7 @@ def markupOutput(dataset, blastOutput):
     databases = ''
     finish_db_line = 0
     prevLine = ''
+    summary_end = 0
     for line in output_lines:
         if line.startswith('BLAST'):
             continue
@@ -151,6 +196,8 @@ def markupOutput(dataset, blastOutput):
         prevLine = line
         if "Sequences producing significant alignment" in line:
             end = 1
+        if line.startswith('>'):
+            summary_end = 1
         if end == 0:
             if '/data/blast/' in line:
                 if finish_db_line == 1:
@@ -170,10 +217,27 @@ def markupOutput(dataset, blastOutput):
                 continue
             if 'Length=' in line:
                 line = 'Query ' + line
+        if end == 1 and summary_end == 0 and "Sequences producing significant alignment" not in line:
+            items = line.strip().split(' ')
+            if len(items) > 3:
+                name = items[0]
+                if '|' in name:
+                    name = name.split('|')[1]
+                items[-1] = "<a href='#" + name + "'>" + items[-1] + "</a>"
+                line = ' '.join(items)
+                
         if ".fsa" in line and "Database:" not in line:
             continue
-        blastOutput = blastOutput + "\n" + line
+
+        if summary_end == 1:
+            if line.startswith('>'):
+                name = line.replace('>', '').strip().split(' ')[0]
+                if '|' in name:
+                    name = name.split('|')[1]
+                blastOutput = blastOutput + "\n" + "<name='" + name + "'>\n"
         
+        blastOutput = blastOutput + "\n" + line
+
     if "Sc_nuclear" in dataset or "Sc_mito" in dataset:
         blastOutput = markupChromosomalCoord(blastOutput)
     else:
@@ -185,15 +249,8 @@ def markupOutput(dataset, blastOutput):
                 if line.startswith('>') and "SGDID:" in line:
                     isDef = 1
                     data.append("<hr><p>")
-                    words = line.split(' ')
-                    sgdid = ''
-                    for word in words:
-                        if word.startswith('SGDID:'):
-                            sgdid = word.replace('SGDID:', '')
-                            sgdid = sgdid.replace(',', '')
-                            break
                     data.append(line)
-                    link_list = "<b>[ <a href='" + SEQAN + sgdid + "' target='_blastout'>Retrieve Sequence</a> / <a href='" + GBROWSE + sgdid + "' target='_blastout'>Genome Browser</a> / <a href='" + LOCUS + sgdid + "' target='_blastout'>SGD Locus page</a> ]</b>"
+                    link_list = link_out_for_feature(line)
                 elif line.startswith('>gi') or line.startswith('gi|'):
                     newline = record_line(line)
                     data.append(newline)
