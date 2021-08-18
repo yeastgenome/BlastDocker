@@ -234,7 +234,7 @@ def markupOutput(dataset, blastOutput):
                 name = line.replace('>', '').strip().split(' ')[0]
                 if '|' in name:
                     name = name.split('|')[1]
-                blastOutput = blastOutput + "\n" + "<name='" + name + "'>\n"
+                blastOutput = blastOutput + "\n" + "<a name='" + name + "'>\n"
         
         blastOutput = blastOutput + "\n" + line
 
