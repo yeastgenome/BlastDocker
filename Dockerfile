@@ -6,7 +6,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 
 WORKDIR /tools
 
-RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.12.0+-x64-linux.tar.gz \
+RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.13.0/ncbi-blast-2.13.0+-x64-linux.tar.gz \
     && tar zxvf ncbi-blast-2.12.0+-x64-linux.tar.gz \
     && rm ncbi-blast-2.12.0+-x64-linux.tar.gz \
     && git clone https://github.com/yeastgenome/BlastDocker.git
