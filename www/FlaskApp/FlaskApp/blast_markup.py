@@ -238,7 +238,7 @@ def markupOutput(dataset, blastOutput):
         
         blastOutput = blastOutput + "\n" + line
 
-    if "Sc_nuclear" in dataset or "Sc_mito" in dataset:
+    if ("Sc_nuclear" in dataset or "Sc_mito" in dataset) and "[chromosome=2-micron]" not in blastOutput:
         blastOutput = markupChromosomalCoord(blastOutput)
     else:
         if "NotFeature" not in dataset:
