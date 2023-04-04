@@ -11,6 +11,9 @@ RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.13.0/ncbi-blast
     && rm ncbi-blast-2.13.0+-x64-linux.tar.gz \
     && git clone https://github.com/yeastgenome/BlastDocker.git
 
+WORKDIR /tools/BlastDocker
+RUN git checkout stuart_fargate
+
 #####
 
 FROM ubuntu:20.04 
@@ -45,6 +48,7 @@ RUN a2enmod wsgi \
     && virtualenv venv \
     && . venv/bin/activate
 
+WORKDIR /data
 WORKDIR /
 
 CMD ["apachectl", "-D", "FOREGROUND"]
