@@ -48,7 +48,7 @@ RUN a2enmod wsgi \
     && virtualenv venv \
     && . venv/bin/activate
 
-WORKDIR /data
+WORKDIR /data/blast
 WORKDIR /
 
 CMD ["apachectl", "-D", "FOREGROUND"]
