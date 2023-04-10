@@ -435,8 +435,19 @@ def run_blast(request):
     
     output = markupOutput(datasets, output)
 
-    (totalHits, showHits, records) = parse_hits(blastoutfile)
+    records = []
+    totalHits = 0
+    showHits = 0
 
+    # if not program.endswith('tblastx'): 
+    #   (totalHits, showHits, records) = parse_hits(blastoutfile)
+    # else:
+
+    try:
+        (totalHits, showHits, records) = parse_hits(blastoutfile)
+    except:
+        pass
+    
     # "<font size=+1><pre>" + output + "</pre></font>",
     
     return { "cmd": cmd,
