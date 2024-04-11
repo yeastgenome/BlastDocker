@@ -5,7 +5,7 @@ rootUrl = 'https://www.yeastgenome.org/'
 LOCUS = rootUrl + 'locus/'
 SEQ = rootUrl + 'seqTools?chr='
 SEQAN = rootUrl + 'seqTools?seqname='
-GBROWSE = 'https://browse.yeastgenome.org/?loc='
+GBROWSE = 'https://jbrowse.yeastgenome.org/?loc='
 NCBI_URL = 'https://www.ncbi.nlm.nih.gov/nuccore/'
 
 def number2roman():
